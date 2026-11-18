@@ -1,70 +1,97 @@
-# Getting Started with Create React App
+# SweetSpot — Padel Store
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+An online store for padel rackets built with **React**. Products are loaded from a **Supabase** (PostgreSQL) database, the cart is kept between visits, and the checkout validates the form and sends an order confirmation e-mail through **EmailJS**.
 
-## Available Scripts
+> **Note:** this is a portfolio project. No real payments are processed.
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- **Product catalogue** loaded from Supabase, with filters for racket shape and player level
+- **Home page** with best-rated rackets, a racket shape guide and player testimonials
+- **Shopping cart** drawer built with the Context API — change quantities, remove items; the cart is saved in `localStorage`
+- **Checkout**
+  - delivery form and choice of shipping method
+  - discount codes
+  - card form that formats input as you type and validates it (Luhn checksum, expiry date)
+  - order confirmation e-mail sent through EmailJS
+- **Routing** with React Router, including a redirect when the cart is empty
+- **Tests** written with Jest and React Testing Library, run on every push by GitHub Actions
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Tech stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+React 18 · React Router 6 · Context API & custom hooks · Supabase · EmailJS · Jest · React Testing Library · GitHub Actions
 
-### `npm test`
+## Project structure
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```
+src/
+├── components/        UI components (Home, ProductList, Cart, Checkout, ...)
+├── context/           CartContext — global cart state saved in localStorage
+├── hooks/             useProducts, useOrderTotal, useCheckoutForm
+├── services/          emailService — EmailJS integration
+├── utils/             input formatters and form validators
+├── data/              static content for the home page
+└── supabaseClient.js  Supabase client configured from environment variables
+```
 
-### `npm run build`
+## Getting started
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+**Requirements:** Node.js 18+, a free [Supabase](https://supabase.com) project and, optionally, an [EmailJS](https://www.emailjs.com) account for confirmation e-mails.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm install
+cp .env.example .env   # then fill in your own keys
+npm start              # http://localhost:3000
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Database
 
-### `npm run eject`
+The app reads from a single `products` table. The `isRecommended` column is camelCase, so it needs double quotes in SQL. Read-only public access is granted through Row Level Security:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```sql
+create table products (
+  id              bigint generated always as identity primary key,
+  name            text not null,
+  price           numeric(10, 2) not null,
+  shape           text not null,           -- Round | Teardrop | Diamond
+  level           text not null,           -- Beginner | Intermediate | Advanced
+  rating          numeric(2, 1),
+  reviews         integer default 0,
+  image_url       text,
+  "isRecommended" boolean default false
+);
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+alter table products enable row level security;
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+create policy "Products are publicly readable"
+  on products for select
+  to anon
+  using (true);
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### EmailJS template
 
-## Learn More
+The order confirmation template receives these variables: `to_email`, `order_id`, `customer_name`, `delivery_address`, `order_total` and `order_items` (a list with `name`, `price`, `units` and `image`).
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Trying out the checkout
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+| What | Value |
+| --- | --- |
+| Discount code | `SWEETSPOT10` (10% off) |
+| Card number | `4242 4242 4242 4242` |
+| Expiry date / CVV | any future date / any 3 digits |
 
-### Code Splitting
+## Available scripts
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+| Command | Description |
+| --- | --- |
+| `npm start` | Runs the app in development mode |
+| `npm test` | Runs the test suite |
+| `npm run build` | Creates a production build in `build/` |
 
-### Analyzing the Bundle Size
+## Possible improvements
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Save orders in the database and validate discount codes on the server
+- Integrate a real payment provider (e.g. Stripe in test mode)
+- Add a product details page and search
+- Migrate from Create React App to Vite and TypeScript
