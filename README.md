@@ -2,6 +2,8 @@
 
 An online store for padel rackets built with **React**. Products are loaded from a **Supabase** (PostgreSQL) database, the cart is kept between visits, and the checkout validates the form and sends an order confirmation e-mail through **EmailJS**.
 
+**Live demo:** https://sweetspot-padel-store.vercel.app
+
 > **Note:** this is a portfolio project. No real payments are processed.
 
 ## Features
